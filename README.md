@@ -16,6 +16,9 @@ sudo apt install open-jtalk open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr5
 pip install -r requirements.txt
 ```
 
+### リンク
+* 英単語カナ変換辞書: [beg-eng.dic](https://fastapi.metacpan.org/source/MASH/Lingua-JA-Yomi-0.01/lib/Lingua/JA)
+
 ## 使い方
 ### 引数
 * text: 変換するテキスト。テキストファイルのパスも指定可能。
@@ -25,6 +28,7 @@ pip install -r requirements.txt
 * mp3_output: 音声の出力ファイル名 (デフォルト: output.mp3)
 * background: 背景の画像または動画 (オプション)
 * music_file: BGMとして使用する音楽ファイル (オプション)
+* en2kana_dic: カナ変換用の英単語ファイル (デフォルト: bep-eng.dic)
 
 ### 注意事項
 このツールは、テキストの各行を個別のセグメントとして処理します。そのため、大量のテキストを処理する際は、適切な区切りでテキストを分割することをおすすめします。
@@ -37,6 +41,13 @@ python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --back
 ```  
 * [背景動画サンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output_movie.mp4)  
 * [テキスト読み上げサンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output.mp3)  
+
+### 英単語をカナに変換する `bep-eng.dic` の利用方法
+`bep-eng.dic` ファイルを実行ディレクトリと同じ階層に配置してください。
+```shell
+wget https://fastapi.metacpan.org/source/MASH/Lingua-JA-Yomi-0.01/lib/Lingua/JA/bep-eng.dic
+python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.mp4 --music_file=yume.mp3 --en2kana_dic=bep-eng.dic
+```
 
 ## 使用リソースの著作権情報
 ### BGM

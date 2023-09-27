@@ -13,9 +13,6 @@ class TextToVideo:
     def __init__(self):
         self._dic = {}
 
-        if os.path.isfile('bep-eng.dicd'):
-            self.load_dic('bep-eng.dic')
-
     def convert(self,
                 text,
                 mp3_output="output.mp3",
@@ -23,7 +20,8 @@ class TextToVideo:
                 dictionary_dir="/var/lib/mecab/dic/open-jtalk/naist-jdic",
                 output_filename="output.mp4",
                 background=None,
-                music_file=None):
+                music_file=None,
+                en2kana_dic="bep-eng.dic"):
         """_summary_
 
         Args:
@@ -32,12 +30,17 @@ class TextToVideo:
             htsvoice (str, optional): _description_. Defaults to "/usr/share/hts-voice/nitech-jp-atr503-m001/nitech_jp_atr503_m001.htsvoice".
             dictionary_dir (str, optional): _description_. Defaults to "/var/lib/mecab/dic/open-jtalk/naist-jdic".
             output_filename (str, optional): _description_. Defaults to "output.mp4".
-            background (_type_, optional): _description_. Defaults to None.
+            background (str, optional): _description_. Defaults to None.
+            music_file (str, optional): _description_. Defaults to None.
+            en2kan_dic (str, optional): _description_. Defaults to "bep-eng.dic.
         """
 
         if os.path.isfile(text):
             with open(text, 'r', encoding='utf-8') as file:
                 text = file.read()
+
+        if en2kana_dic and os.path.isfile(en2kana_dic):
+            self.load_dic(en2kana_dic)
 
         segments = text.split("\n")
         video_segments = []
