@@ -58,6 +58,7 @@ python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --back
 ```shell
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.jpg --music_file=yume.mp3 --engine=voicevox --speaker_id=1
 ```
+* [VOICEVOX COREサンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output_voicevox.mp4)
 
 ### 英単語をカナに変換する `bep-eng.dic` の利用方法
 `bep-eng.dic` ファイルを実行ディレクトリと同じ階層に配置してください。
