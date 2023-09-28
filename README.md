@@ -66,6 +66,20 @@ wget https://fastapi.metacpan.org/source/MASH/Lingua-JA-Yomi-0.01/lib/Lingua/JA/
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.mp4 --music_file=yume.mp3 --en2kana_dic=bep-eng.dic
 ```
 
+### セグメント毎の背景を指定する
+音声変換元のファイル `speech_text.txt` において、行先頭で画像を指定します。指定しない場合、デフォルトの画像（または動画）が使用されます。
+```
+$ cat speach_text.txt
+{{--bg:bg2.jpg--}}時の狭間の選択
+
+{{--bg:bg3.jpg--}}2070年、エマは時間旅行の技術を使用して10年前の世界に戻った。彼女の目的は、父親の交通事故を防ぐことだった。しかし、過去を変えることの影響は計り知れなかった。
+
+{{--bg:bg4.jpg--}}エマが10年前に戻ったことで、彼女の存在は多くの出来事を変えてしまった。彼女の幼馴染であるルーカスは、エマが知っている未来では成功した起業家だったが、この新しい現実では彼は失業中であり、生活に困っていた。
+
+...
+```
+
+
 ## 使用リソースの著作権情報
 ### BGM
 サンプル動画のバックグラウンドミュージックには、甘茶さまの「夢」を使用させていただきました。  

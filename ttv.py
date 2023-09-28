@@ -57,12 +57,16 @@ class TextToVideo:
             if not segment.strip():
                 continue
 
+            segment, param_background, param_slidetime = self.extract_params(segment)
+            if not param_background:
+                param_background = background
+
             temp_filename = self.run(text=segment,
                                      mp3_output=temp_output_mp3,
                                      htsvoice=htsvoice,
                                      dictionary_dir=dictionary_dir,
                                      output_filename=temp_output,
-                                     background=background,
+                                     background=param_background,
                                      engine=engine,
                                      speaker_id=speaker_id)
             video_segments.append(temp_filename)
@@ -80,6 +84,24 @@ class TextToVideo:
                                       output_file=output_filename)
 
         return os.path.abspath(output_filename)
+
+    def extract_params(self,
+                       text: str):
+        extract_params = {}
+        match = re.match(r'^(\{\{--(?P<params>.*?)--\}\})?(?P<text>[^\{\{\}\}]+)', text)
+
+        if match['params']:
+            params = match['params'].split(',')
+
+            for _, param in enumerate(params):
+                k, v = param.split(':')
+                extract_params[k] = v
+
+        return [
+            match['text'],
+            extract_params.get('bg'),
+            extract_params.get('ts'),
+        ]
 
     def run(self,
             text: str,
@@ -108,9 +130,9 @@ class TextToVideo:
         self.generate_srt(text, srt_file, duration)
 
         base_video = "base_video.mp4"
-        self.generate_video_with_subtitle(background=background,
-                                          base_video=base_video,
-                                          duration=duration)
+        self.generate_background_video(background=background,
+                                       base_video=base_video,
+                                       duration=duration)
 
         adelay_filter = "adelay=1s:all=true"
         self.combine_videos(input_audio=mp3_output,
@@ -199,10 +221,10 @@ class TextToVideo:
 
         return ext.lower() in video_extensions
 
-    def generate_video_with_subtitle(self,
-                                     background: str=None,
-                                     base_video: str=None,
-                                     duration: float=10.0) -> None:
+    def generate_background_video(self,
+                                  background: str=None,
+                                  base_video: str=None,
+                                  duration: float=10.0) -> None:
         loop_time = str(int(duration))
 
         if background:
@@ -232,7 +254,7 @@ class TextToVideo:
                     "-c:v", "libx264",
                     "-t", loop_time,
                     "-s", "1920x1080",
-                    "-pix_fmt", "yuv420p",  # ここを追加
+                    "-pix_fmt", "yuv420p",
                     "-r", "30",
                     base_video
                 ]
@@ -258,14 +280,16 @@ class TextToVideo:
                     input_srt: str,
                     adelay_filter: str,
                     output_video: str) -> None:
-        subtitle_filter = f"subtitles={input_srt}:force_style='FontSize=18,Alignment=2'"  # ここを変更
+        subtitle_filter = f"subtitles={input_srt}:force_style='FontSize=18,Alignment=2'"
         cmd = [
             "ffmpeg",
             "-y",
             "-loglevel", "error",
             "-i", base_video,
             "-i", input_audio,
-            "-vf", subtitle_filter,
+            "-filter_complex", f"[0:v]fade=t=in:st=0:d=0.3,{subtitle_filter}[vout]",
+            "-map", "[vout]",
+            "-map", "1:a",
             "-af", adelay_filter,
             "-c:a", "aac",
             "-c:v", "libx264",
