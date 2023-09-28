@@ -5,15 +5,23 @@ WaZaoは、テキストを音声に変換し、その音声を背景画像やBGM
 WaZaoは、chatbotのコメントやレスポンス、eラーニングなどのテキストを音声に変換するニーズに応えるために開始されました。このツールは、ユーザーが効果的に映像素材を生成できるよう、複数の技術を統合して開発されました。
 
 ## 準備
-環境 debian12.1, OpenJ Talk1.10, Python3.11, ffmpeg5.1.3  
+環境 debian12.1, OpenJ Talk1.10, Python3.11, ffmpeg5.1.3, voicevox_core0.14.4  
 ### 依存関係
 * fire: コマンドラインインターフェースを簡単に作成するためのライブラリ
 * subprocess: Python からシェルコマンドを実行するためのモジュール
 * open_jtalk: テキストを音声に変換するツール
 * ffmpeg: 音声、画像、動画の変換・編集を行うツール
 ```shell
+# open-jtalk
 sudo apt install open-jtalk open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr503-m001 ffmpeg
 pip install -r requirements.txt
+pip install pip install https://github.com/VOICEVOX/voicevox_core/releases/download/0.14.4/voicevox_core-0.14.4+cpu-cp38-abi3-linux_x86_64.whl
+
+# voicevox
+binary=download-linux-x64
+curl -sSfL https://github.com/VOICEVOX/voicevox_core/releases/latest/download/${binary} -o download
+chmod +x download
+./download
 ```
 
 ### リンク
@@ -29,9 +37,13 @@ pip install -r requirements.txt
 * background: 背景の画像または動画 (オプション)
 * music_file: BGMとして使用する音楽ファイル (オプション)
 * en2kana_dic: カナ変換用の英単語ファイル (デフォルト: bep-eng.dic)
+* engine: 音声変換エンジン open-jtalk|voicevox (デフォルト: open-jtalk)
+* speaker_id: voicevoxで使用する話者ID 0-50 (デフォルト: 0)
 
 ### 注意事項
 このツールは、テキストの各行を個別のセグメントとして処理します。そのため、大量のテキストを処理する際は、適切な区切りでテキストを分割することをおすすめします。
+
+#### Open Jtalk
 ```shell
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.jpg --music_file=yume.mp3
 ```  
@@ -41,6 +53,11 @@ python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --back
 ```  
 * [背景動画サンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output_movie.mp4)  
 * [テキスト読み上げサンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output.mp3)  
+
+#### VOICEVOX CORE
+```shell
+python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.jpg --music_file=yume.mp3 --engine=voicevox --speaker_id=1
+```
 
 ### 英単語をカナに変換する `bep-eng.dic` の利用方法
 `bep-eng.dic` ファイルを実行ディレクトリと同じ階層に配置してください。
@@ -63,3 +80,5 @@ python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --back
 
 ## リンク
 * Open JTalk : https://open-jtalk.sourceforge.net
+* VOICEVOX : https://voicevox.hiroshiba.jp
+* voicevox_core : https://github.com/VOICEVOX/voicevox_core

@@ -5,6 +5,7 @@ import os
 import textwrap
 import shutil
 import re
+from text2voice import Text2Voice
 
 class TextToVideo:
 
@@ -21,18 +22,22 @@ class TextToVideo:
                 output_filename="output.mp4",
                 background=None,
                 music_file=None,
-                en2kana_dic="bep-eng.dic"):
+                en2kana_dic="bep-eng.dic",
+                engine="open-jtalk",
+                speaker_id=0):
         """_summary_
 
         Args:
-            text (_type_): _description_
+            text (str): _description_
             mp3_output (str, optional): _description_. Defaults to "output.mp3".
             htsvoice (str, optional): _description_. Defaults to "/usr/share/hts-voice/nitech-jp-atr503-m001/nitech_jp_atr503_m001.htsvoice".
             dictionary_dir (str, optional): _description_. Defaults to "/var/lib/mecab/dic/open-jtalk/naist-jdic".
             output_filename (str, optional): _description_. Defaults to "output.mp4".
             background (str, optional): _description_. Defaults to None.
             music_file (str, optional): _description_. Defaults to None.
-            en2kan_dic (str, optional): _description_. Defaults to "bep-eng.dic.
+            en2kan_dic (str, optional): _description_. Defaults to "bep-eng.dic".
+            engine (str, optional): "open-jtalk"|"voicevox". Defaults to "open-jtalk".
+            speaker_id (int, optional): voicevox option 0~50. Defaults to 0.
         """
 
         if os.path.isfile(text):
@@ -52,17 +57,18 @@ class TextToVideo:
             if not segment.strip():
                 continue
 
-            temp_filename = self.run_open_jtalk_with_text(text=segment,
-                                                          mp3_output=temp_output_mp3,
-                                                          htsvoice=htsvoice,
-                                                          dictionary_dir=dictionary_dir,
-                                                          output_filename=temp_output,
-                                                          background=background)
+            temp_filename = self.run(text=segment,
+                                     mp3_output=temp_output_mp3,
+                                     htsvoice=htsvoice,
+                                     dictionary_dir=dictionary_dir,
+                                     output_filename=temp_output,
+                                     background=background,
+                                     engine=engine,
+                                     speaker_id=speaker_id)
             video_segments.append(temp_filename)
 
         self.merge_videos(video_list=video_segments,
-                          output=output_filename,
-                          mp3_output=mp3_output)
+                          output=output_filename)
 
         for vid in video_segments:
             os.remove(vid)
@@ -75,28 +81,26 @@ class TextToVideo:
 
         return os.path.abspath(output_filename)
 
-    def run_open_jtalk_with_text(self,
-                                 text: str,
-                                 mp3_output: str="output.mp3",
-                                 htsvoice: str=None,
-                                 dictionary_dir: str=None,
-                                 output_filename: str="output.mp4",
-                                 background: str=None) -> str:
+    def run(self,
+            text: str,
+            mp3_output: str="output.mp3",
+            htsvoice: str=None,
+            dictionary_dir: str=None,
+            output_filename: str="output.mp4",
+            background: str=None,
+            engine: str='open-jtalk',
+            speaker_id: int=1) -> str:
         output_wav = 'output.wav'
-        cmd = ["open_jtalk"]
-
-        if dictionary_dir:
-            cmd.extend(["-x", dictionary_dir])
-        if htsvoice:
-            cmd.extend(["-m", htsvoice])
-        cmd.extend(["-ow", output_wav])
-
         speach_text = self.en2kana(text)
 
-        with subprocess.Popen(cmd, stdin=subprocess.PIPE) as proc:
-                proc.stdin.write(speach_text.encode('utf-8'))
-                proc.stdin.close()
-                proc.wait()
+        text2voice = Text2Voice(text=speach_text,
+              dictionary_dir=dictionary_dir,
+              output_wav=output_wav,
+              htsvoice=htsvoice,
+              engine=engine,
+              speaker_id=speaker_id)
+        text2voice.main()
+
         self.convert_wav_to_mp3(output_wav, mp3_output)
         duration = self.duration(mp3_output=mp3_output)
 
@@ -180,7 +184,7 @@ class TextToVideo:
 
         with open(output_srt, 'w', encoding='utf-8') as f:
             f.write("1\n")
-            f.write("00:00:01,000 --> " + "{:02d}:{:02d}:{:02d},{:03d}\n".format(
+            f.write("00:00:00,000 --> " + "{:02d}:{:02d}:{:02d},{:03d}\n".format(
                 int(duration // 3600),
                 int((duration % 3600) // 60),
                 int(duration % 60),
@@ -258,7 +262,7 @@ class TextToVideo:
         cmd = [
             "ffmpeg",
             "-y",
-            "-loglevel", "error",   # この行を追加
+            "-loglevel", "error",
             "-i", base_video,
             "-i", input_audio,
             "-vf", subtitle_filter,
@@ -286,8 +290,7 @@ class TextToVideo:
 
     def merge_videos(self,
                      video_list: object,
-                     output: str,
-                     mp3_output: str) -> None:
+                     output: str) -> None:
         with open("filelist.txt", "w") as f:
             for vid in video_list:
                 f.write(f"file '{vid}'\n")
@@ -301,18 +304,6 @@ class TextToVideo:
             "-i", "filelist.txt",
             "-c", "copy",
             output
-        ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL)
-
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-loglevel", "error",
-            "-i", output,
-            "-c:a", "libmp3lame",
-            "-q:a", "0",
-            "-map", "a",
-            mp3_output
         ]
         subprocess.run(cmd, stdout=subprocess.DEVNULL)
 
