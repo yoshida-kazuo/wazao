@@ -39,6 +39,7 @@ chmod +x download
 * en2kana_dic: カナ変換用の英単語ファイル (デフォルト: bep-eng.dic)
 * engine: 音声変換エンジン open-jtalk|voicevox (デフォルト: open-jtalk)
 * speaker_id: voicevoxで使用する話者ID 0-50 (デフォルト: 0)
+* video_codec: ビデオコデックの指定 (デフォルト:libx264)
 
 ### 注意事項
 このツールは、テキストの各行を個別のセグメントとして処理します。そのため、大量のテキストを処理する際は、適切な区切りでテキストを分割することをおすすめします。
@@ -67,15 +68,18 @@ wget https://fastapi.metacpan.org/source/MASH/Lingua-JA-Yomi-0.01/lib/Lingua/JA/
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.mp4 --music_file=yume.mp3 --en2kana_dic=bep-eng.dic
 ```
 
-### セグメント毎の背景を指定する
-音声変換元のファイル `speech_text.txt` において、行先頭で画像を指定します。指定しない場合、デフォルトの画像（または動画）が使用されます。
+### セグメントの設定
+音声変換元のファイル `speech_text.txt` では、行の先頭に `{{--<param>,<param>--}}` と記述することで、各セグメントの設定を行うことができます。
+* bg: (str) 使用する背景画像ファイル名 (例: bg.jpg)
+* ad: (int) 読み上げ前の静寂の持続時間 (秒)
+* sd: (int) 読み上げ後の静寂の持続時間 (秒)
 ```
 $ cat speach_text.txt
 {{--bg:bg2.jpg--}}時の狭間の選択
 
 {{--bg:bg3.jpg--}}2070年、エマは時間旅行の技術を使用して10年前の世界に戻った。彼女の目的は、父親の交通事故を防ぐことだった。しかし、過去を変えることの影響は計り知れなかった。
 
-{{--bg:bg4.jpg--}}エマが10年前に戻ったことで、彼女の存在は多くの出来事を変えてしまった。彼女の幼馴染であるルーカスは、エマが知っている未来では成功した起業家だったが、この新しい現実では彼は失業中であり、生活に困っていた。
+{{--bg:bg4.jpg,sd:3--}}エマが10年前に戻ったことで、彼女の存在は多くの出来事を変えてしまった。彼女の幼馴染であるルーカスは、エマが知っている未来では成功した起業家だったが、この新しい現実では彼は失業中であり、生活に困っていた。
 
 ...
 ```

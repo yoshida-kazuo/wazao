@@ -9,22 +9,29 @@ from text2voice import Text2Voice
 
 class TextToVideo:
 
-    _dic = None
+    _background: str=None
+    _dic: dict=None
+    _video_size: str=None
+    _adlay: int=None
+    _silence_duration: int=None
+    _video_codec: str=None
 
     def __init__(self):
         self._dic = {}
+        self._video_size = '1920x1080'
 
     def convert(self,
-                text,
-                mp3_output="output.mp3",
-                htsvoice="./htsvoice/takumi_normal.htsvoice",
-                dictionary_dir="/var/lib/mecab/dic/open-jtalk/naist-jdic",
-                output_filename="output.mp4",
-                background=None,
-                music_file=None,
+                text: str,
+                mp3_output: str="output.mp3",
+                htsvoice: str="./htsvoice/takumi_normal.htsvoice",
+                dictionary_dir: str="/var/lib/mecab/dic/open-jtalk/naist-jdic",
+                output_filename: str="output.mp4",
+                background: str=None,
+                music_file: str=None,
                 en2kana_dic="bep-eng.dic",
-                engine="open-jtalk",
-                speaker_id=0):
+                engine: str="open-jtalk",
+                speaker_id: int=0,
+                video_codec: str="libx264"):
         """_summary_
 
         Args:
@@ -38,7 +45,10 @@ class TextToVideo:
             en2kan_dic (str, optional): _description_. Defaults to "bep-eng.dic".
             engine (str, optional): "open-jtalk"|"voicevox". Defaults to "open-jtalk".
             speaker_id (int, optional): voicevox option 0~50. Defaults to 0.
+            video_code (str, optional): _description_. Defaults to "libx264"
         """
+
+        self._video_codec = video_codec
 
         if os.path.isfile(text):
             with open(text, 'r', encoding='utf-8') as file:
@@ -57,16 +67,15 @@ class TextToVideo:
             if not segment.strip():
                 continue
 
-            segment, param_background, param_slidetime = self.extract_params(segment)
-            if not param_background:
-                param_background = background
+            segment = self.extract_params(segment)
+            if not self._background:
+                self._background = background
 
             temp_filename = self.run(text=segment,
                                      mp3_output=temp_output_mp3,
                                      htsvoice=htsvoice,
                                      dictionary_dir=dictionary_dir,
                                      output_filename=temp_output,
-                                     background=param_background,
                                      engine=engine,
                                      speaker_id=speaker_id)
             video_segments.append(temp_filename)
@@ -86,7 +95,7 @@ class TextToVideo:
         return os.path.abspath(output_filename)
 
     def extract_params(self,
-                       text: str):
+                       text: str) -> str:
         extract_params = {}
         match = re.match(r'^(\{\{--(?P<params>.*?)--\}\})?(?P<text>[^\{\{\}\}]+)', text)
 
@@ -97,11 +106,11 @@ class TextToVideo:
                 k, v = param.split(':')
                 extract_params[k] = v
 
-        return [
-            match['text'],
-            extract_params.get('bg'),
-            extract_params.get('ts'),
-        ]
+        self._adlay = int(extract_params.get('ad', 1))
+        self._silence_duration = int(extract_params.get('sd', 0))
+        self._background = extract_params.get('bg', None)
+
+        return match['text']
 
     def run(self,
             text: str,
@@ -109,42 +118,37 @@ class TextToVideo:
             htsvoice: str=None,
             dictionary_dir: str=None,
             output_filename: str="output.mp4",
-            background: str=None,
             engine: str='open-jtalk',
-            speaker_id: int=1) -> str:
+            speaker_id: int=0) -> str:
         output_wav = 'output.wav'
         speach_text = self.en2kana(text)
 
         text2voice = Text2Voice(text=speach_text,
-              dictionary_dir=dictionary_dir,
-              output_wav=output_wav,
-              htsvoice=htsvoice,
-              engine=engine,
-              speaker_id=speaker_id)
+                                dictionary_dir=dictionary_dir,
+                                output_wav=output_wav,
+                                htsvoice=htsvoice,
+                                engine=engine,
+                                speaker_id=speaker_id)
         text2voice.main()
 
         self.convert_wav_to_mp3(output_wav, mp3_output)
-        duration = self.duration(mp3_output=mp3_output)
+        duration = self.duration(filename=mp3_output)
 
         srt_file = "subtitle.srt"
         self.generate_srt(text, srt_file, duration)
 
         base_video = "base_video.mp4"
-        self.generate_background_video(background=background,
-                                       base_video=base_video,
-                                       duration=duration)
+        self.generate_background(background=self._background,
+                                 base_video=base_video,
+                                 duration=duration,
+                                 input_srt=srt_file)
 
-        adelay_filter = "adelay=1s:all=true"
-        self.combine_videos(input_audio=mp3_output,
+        self.combine_videos(speach_audio=mp3_output,
                             base_video=base_video,
-                            input_srt=srt_file,
-                            adelay_filter=adelay_filter,
                             output_video=output_filename)
 
-        os.remove(output_wav)
-        os.remove(srt_file)
-        os.remove(base_video)
-        os.remove(mp3_output)
+        for file in [output_wav, srt_file, base_video, mp3_output]:
+            os.remove(file)
 
         return os.path.abspath(output_filename)
 
@@ -206,10 +210,12 @@ class TextToVideo:
 
         with open(output_srt, 'w', encoding='utf-8') as f:
             f.write("1\n")
-            f.write("00:00:00,000 --> " + "{:02d}:{:02d}:{:02d},{:03d}\n".format(
+            f.write("00:00:{:02d},000 --> ".format(
+                    self._adlay
+                ) + "{:02d}:{:02d}:{:02d},{:03d}\n".format(
                 int(duration // 3600),
                 int((duration % 3600) // 60),
-                int(duration % 60),
+                int(duration % 60) + self._adlay,
                 int((duration % 1) * 1000)
             ))
             f.write(text + "\n")
@@ -221,84 +227,76 @@ class TextToVideo:
 
         return ext.lower() in video_extensions
 
-    def generate_background_video(self,
-                                  background: str=None,
-                                  base_video: str=None,
-                                  duration: float=10.0) -> None:
-        loop_time = str(int(duration))
+    def generate_background(self,
+                            background: str=None,
+                            base_video: str=None,
+                            duration: float=10.0,
+                            input_srt: str=None) -> None:
+        time = str(duration + self._adlay + self._silence_duration)
+        width, height = self._video_size.split('x')
+        subtitle_filter = f"subtitles={input_srt}:force_style='FontSize=18,Alignment=2'"
+        filter_complex = f"[0:v]scale=w={width}:h={height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,{subtitle_filter}[video]"
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-loglevel", "error",
+        ]
 
         if background:
-            filter_complex = f"[0:v]scale=w=1920:h=1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1[video]"
-
             if self.is_video(background):
-                cmd_base_video = [
-                    "ffmpeg",
-                    "-y",
-                    "-loglevel", "error",
+                cmd.extend([
+                    "-stream_loop", "-1",
                     "-i", background,
-                    "-t", loop_time,
-                    "-s", "1920x1080",
-                    "-c:v", "libx264",
-                    "-an",
-                    base_video
-                ]
+                    "-an"
+                ])
             else:
-                cmd_base_video = [
-                    "ffmpeg",
-                    "-y",
-                    "-loglevel", "error",
+                cmd.extend([
                     "-loop", "1",
                     "-i", background,
-                    "-filter_complex", filter_complex,
-                    "-map", "[video]",
-                    "-c:v", "libx264",
-                    "-t", loop_time,
-                    "-s", "1920x1080",
                     "-pix_fmt", "yuv420p",
-                    "-r", "30",
-                    base_video
-                ]
+                    "-r", "30"
+                ])
         else:
-            cmd_base_video = [
-                "ffmpeg",
-                "-y",
-                "-loglevel", "error",
-                "-t", loop_time,
-                "-s", "1920x1080",
+            cmd.extend([
                 "-f", "rawvideo",
                 "-pix_fmt", "yuv420p",
                 "-r", "30",
-                "-i", "/dev/zero",
-                "-c:v", "libx264",
-                base_video
-            ]
-        subprocess.run(cmd_base_video, stdout=subprocess.DEVNULL)
+                "-i", "/dev/zero"
+            ])
+
+        cmd.extend([
+            "-t", time,
+            "-c:v", self._video_codec,
+            "-s", self._video_size,
+            "-filter_complex", filter_complex,
+            "-map", "[video]",
+            base_video
+        ])
+        subprocess.run(cmd, stdout=subprocess.DEVNULL)
 
     def combine_videos(self,
-                    input_audio: str,
-                    base_video: str,
-                    input_srt: str,
-                    adelay_filter: str,
-                    output_video: str) -> None:
-        subtitle_filter = f"subtitles={input_srt}:force_style='FontSize=18,Alignment=2'"
+                       speach_audio: str,
+                       base_video: str,
+                       output_video: str) -> None:
         cmd = [
             "ffmpeg",
             "-y",
             "-loglevel", "error",
             "-i", base_video,
-            "-i", input_audio,
-            "-filter_complex", f"[0:v]fade=t=in:st=0:d=0.3,{subtitle_filter}[vout]",
+            "-i", speach_audio,
+            "-filter_complex", f"[0:v]fade=t=in:st=0:d=0.3[vout]",
             "-map", "[vout]",
             "-map", "1:a",
-            "-af", adelay_filter,
+            "-af", f"adelay={self._adlay}s:all=true,apad=pad_dur={self._silence_duration}",
             "-c:a", "aac",
-            "-c:v", "libx264",
+            "-c:v", self._video_codec,
             output_video
         ]
         subprocess.run(cmd, stdout=subprocess.DEVNULL)
 
     def duration(self,
-                 mp3_output: str) -> float:
+                 filename: str) -> float:
         duration_cmd = [
             "ffprobe",
             "-v",
@@ -307,7 +305,7 @@ class TextToVideo:
             "format=duration",
             "-of",
             "default=noprint_wrappers=1:nokey=1",
-            mp3_output
+            filename
         ]
 
         return float(subprocess.check_output(duration_cmd).decode('utf-8').strip())
@@ -339,28 +337,8 @@ class TextToVideo:
                              music_volume: float,
                              output_file: str) -> None:
         temp_filename = 'tmp.mp4'
-
-        cmd_duration = [
-            "ffprobe",
-            "-v", "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            video_file
-        ]
-        video_duration = float(subprocess.check_output(cmd_duration).decode("utf-8").strip())
-
-        cmd_music_duration = [
-            "ffprobe",
-            "-v", "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            music_file
-        ]
-        music_duration = float(subprocess.check_output(cmd_music_duration).decode("utf-8").strip())
+        video_duration = self.duration(filename=video_file)
+        music_duration = self.duration(filename=music_file)
 
         if video_duration > music_duration:
             loop_count = int(video_duration // music_duration) + 1
