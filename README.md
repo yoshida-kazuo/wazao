@@ -48,18 +48,18 @@ chmod +x download
 ```shell
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.jpg --music_file=yume.mp3
 ```  
-* [背景画像サンプル](https://github.com/yoshida-kazuo/WaZao/raw/main/output.mp4)  
+* [背景画像サンプル](https://github.com/yoshida-kazuo/WaZao/raw/0.6/output.mp4)  
 ```shell
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.mp4 --music_file=yume.mp3
 ```  
-* [背景動画サンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output_movie.mp4)  
-* [テキスト読み上げサンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output.mp3)  
+* [背景動画サンプル](https://github.com/yoshida-kazuo/wazao/raw/0.6/output_movie.mp4)  
+* [テキスト読み上げサンプル](https://github.com/yoshida-kazuo/wazao/raw/0.6/output.mp3)  
 
 #### VOICEVOX CORE
 ```shell
 python ttv.py convert --output_filename=output.mp4 --text=speach_text.txt --background=bg.jpg --music_file=yume.mp3 --engine=voicevox --speaker_id=1
 ```
-* [VOICEVOX COREサンプル](https://github.com/yoshida-kazuo/wazao/raw/main/output_voicevox.mp4)
+* [VOICEVOX COREサンプル](https://github.com/yoshida-kazuo/wazao/raw/0.6/output_voicevox.mp4)
 
 ### 英単語をカナに変換する `bep-eng.dic` の利用方法
 `bep-eng.dic` ファイルを実行ディレクトリと同じ階層に配置してください。
